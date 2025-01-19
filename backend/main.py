@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 import os
 import requests
 from dotenv import load_dotenv
@@ -10,7 +10,7 @@ app = FastAPI(root_path="/api/v1")
 
 
 @app.get("/places")
-def places(query: str):
+def places(query: str = Query(None, title="Query", description="検索クエリ", example="仙台駅周辺で美味しいラーメン屋")):
 
     response = search_text_query(query)
 
@@ -41,7 +41,7 @@ def search_text_query(query: str):
     
     payload = {
         "textQuery": query,
-        "maxResultCount": 20,
+        "maxResultCount": 10,
         "languageCode": 'ja',
     }
 
