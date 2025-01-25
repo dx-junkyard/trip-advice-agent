@@ -30,7 +30,9 @@ def search_text_query(query: str):
         "places.reviews.text.text",
         "places.reviews.rating",
         "places.photos.name",
-        "places.rating"
+        "places.rating",
+        "places.userRatingCount",
+        "places.regularOpeningHours.weekdayDescriptions"
     ])
     
     headers = {
@@ -53,8 +55,10 @@ def search_text_query(query: str):
         "types": x["types"],
         "website": x["websiteUri"] if "websiteUri" in x else None,
         "reviews": x["reviews"] if "reviews" in x else None,
+        "userReviewCount": x["userRatingCount"] if "userRatingCount" in x else None,
         "rating": x["rating"] if "rating" in x else None,
-        "photoUri": get_photo(x["photos"][0]["name"]) if "photos" in x and x["photos"][0] else None
+        "photoUri": get_photo(x["photos"][0]["name"]) if "photos" in x and x["photos"][0] else None,
+        "businessHour": x["regularOpeningHours"]["weekdayDescriptions"] if "regularOpeningHours" in x else None,
     }, response.json()["places"]))
 
 
