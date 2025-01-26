@@ -52,7 +52,7 @@ def search_text_query(query: str):
     response = requests.post(url, headers=headers, json=payload)
 
     return list(map(lambda x: {
-        "name": dpath.util.get(x, "name/text", default=None),
+        "name": dpath.util.get(x, "displayName/text", default=None),
         "address": x["formattedAddress"],
         "types": x["types"],
         "website": dpath.util.get(x, "websiteUri", default=None),
