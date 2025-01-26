@@ -66,7 +66,10 @@ def search_text_query(query: str):
     }, response.json()["places"]))
 
 def get_price(price):
-    return f"{price['units']}{price['currencyCode']}"
+    if price is None:
+        return None
+    else:
+        return f"{price['units']}{price['currencyCode']}"
 
 def get_photo(name: str):
     url = f"https://places.googleapis.com/v1/{name}/media?maxHeightPx=400&maxWidthPx=400&skipHttpRedirect=true"
