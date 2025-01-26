@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query
+import dpath.util
 import os
 import requests
 from dotenv import load_dotenv
@@ -32,7 +33,8 @@ def search_text_query(query: str):
         "places.photos.name",
         "places.rating",
         "places.userRatingCount",
-        "places.regularOpeningHours.weekdayDescriptions"
+        "places.regularOpeningHours.weekdayDescriptions",
+        "places.priceRange"
     ])
     
     headers = {
@@ -50,17 +52,21 @@ def search_text_query(query: str):
     response = requests.post(url, headers=headers, json=payload)
 
     return list(map(lambda x: {
-        "name": x["displayName"],
+        "name": dpath.util.get(x, "name/text", default=None),
         "address": x["formattedAddress"],
         "types": x["types"],
-        "website": x["websiteUri"] if "websiteUri" in x else None,
-        "reviews": x["reviews"] if "reviews" in x else None,
-        "userReviewCount": x["userRatingCount"] if "userRatingCount" in x else None,
-        "rating": x["rating"] if "rating" in x else None,
+        "website": dpath.util.get(x, "websiteUri", default=None),
+        "reviews": dpath.util.get(x, "reviews", default=[]),
+        "userReviewCount": dpath.util.get(x, "userRatingCount", default=None),
+        "rating": dpath.util.get(x, "rating", default=None),
         "photoUri": get_photo(x["photos"][0]["name"]) if "photos" in x and x["photos"][0] else None,
-        "businessHour": x["regularOpeningHours"]["weekdayDescriptions"] if "regularOpeningHours" in x else None,
+        "businessHour": dpath.util.get(x, "regularOpeningHours/weekdayDescriptions", default=None),
+        "minPrice": get_price(dpath.util.get(x, "priceRange/startPrice", default=None)),
+        "maxPrice": get_price(dpath.util.get(x, "priceRange/endPrice", default=None)),
     }, response.json()["places"]))
 
+def get_price(price):
+    return f"{price['units']}{price['currencyCode']}"
 
 def get_photo(name: str):
     url = f"https://places.googleapis.com/v1/{name}/media?maxHeightPx=400&maxWidthPx=400&skipHttpRedirect=true"

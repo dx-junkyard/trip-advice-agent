@@ -55,18 +55,20 @@ def get_place(
         query (str): The query to search. e.g. restaurant name, spot name, etc.
 
     Returns:
-        A list of dictionaries, where each dictionary represents a station with the following keys:
-        - 'name' (dict): Contains 'text' (station name) and 'languageCode' (language code).
-        - 'address' (str): The address of the station.
-        - 'types' (list of str): A list of station types (e.g., 'transit_station', 'train_station').
+        A list of dictionaries, where each dictionary represents a place and contains the following keys:
+        - 'name' (str): The name of the place.
+        - 'address' (str): The address of the place.
+        - 'types' (list of str): A list of place types (e.g., 'transit_place', 'train_place').
         - 'reviews' (list of dict): A list of top 5 reviews, each containing:
             - 'rating' (int): Rating out of 5.
             - 'text' (dict): A dictionary with 'text' containing the review content.
         - 'userReviewCount' (int): The number of user reviews.
-        - 'rating' (float): The average rating of the station.
-        - 'photoUri' (str): URL of a photo representing the station.
-        - 'businessHour' (str): The business status of the station.
-        - 'website' (str): URL of the station's website.
+        - 'rating' (float): The average rating of the place.
+        - 'photoUri' (str): URL of a photo representing the place.
+        - 'businessHour' (str): The business status of the place.
+        - 'website' (str): URL of the place's website.
+        - 'minPrice' (str): The minimum price of the place.
+        - 'maxPrice' (str): The maximum price of the place.
     """
     response = requests.get(
         os.getenv("PLACE_API"),
@@ -123,14 +125,20 @@ def langgraph_builder(*, model, **kwargs):
         "これまでの情報をもとに、旅行プランの提案文をまとめてください。提案文には各スポットのレビューはスポットごとに1つ記載してください"
         "提案文は各日付に対して以下のフォーマットで記載してください。ただし3日以上の長期旅行の場合は、数日ごとにまとめて提案文を記載してください。"
         "営業時間は日付に合わせて記載してください。もし定休日だったり休業中だったりする場合はそのスポットは提案しないでください。"
-        "末尾にはこの旅行の全体の説明や注意事項を記載してください。"
-        "クチコミの文が長い場合は、適宜省略してください。"
+        "末尾には注意事項を記載してください。"
+        "予算は各スポットの価格を元に旅行全体の予算を想定してください。"
+        "クチコミの文が長い場合は、適宜省略してください。またクチコミはポジティブなものや有益な情報を選んで記載してください。"
         "この提案は一度しか行わないため、提案文をよく検討してから提出してください。"
         """
     旅行プランの先頭には以下の情報を記載してください。
     # {{planName}}
     - 全体のテーマ　：{{theme}}
     - エリア名　　　：{{area}}
+
+    ## 全体の旅行プランの説明
+    この旅行プランは{{startDate}}から{{endDate}}までの{{duration}}日間の旅行プランです。
+    {{theme}}をテーマに、{{area}}を中心に観光スポットを巡ります。
+    このプランでは{{budget}}の予算を想定しています。
 
     各日程には以下の情報を記載し、最終日まで続けてください。
     ### 日付: {{date}}(短期旅行の場合) {{startDate}} - {{endDate}}(長期旅行の場合)
@@ -143,10 +151,10 @@ def langgraph_builder(*, model, **kwargs):
     - おすすめ理由　：{{reason}}
     - クチコミ評価　：{{rating}} ({{ratingCount}}件)
     - クチコミの声　： 
-        - {{review1}}
-        - {{review2}}
+        - {{review}}
     - 営業時間　　　：{{businessHours}}
     - 所要時間(目安)：{{duration}}
+    - 価格帯　　　　：{{minPrice}} ~ {{maxPrice}}
     - Webサイト    ：[spotName]({{websiteUrl}})
 
 
@@ -181,6 +189,33 @@ agent = reasoning_engines.LangchainAgent(
 )
 
 # 短期旅行の場合
+# response = agent.query(
+#     input={
+#         "role": "user", 
+#         "content": """
+# 旅行プランを考えてください。
+# ---
+# 旅行エリア
+# - 仙台
+
+# 興味・目的
+# - グルメ、観光スポットめぐり
+
+# 日程や滞在時間
+# - 1/28-1/31
+
+# 移動手段
+# - 新幹線、旅行中は電車・バス・徒歩
+
+# 他に希望条件や特記事項があれば
+# - できるだけ混雑を避けたい
+# - 主要な観光スポットは抑えたい
+# - すぐ疲れるのであまり多くのスポットは回れない
+# - 美味しいものは食べたい
+#         """},
+# )
+
+# 短期旅行の場合
 response = agent.query(
     input={
         "role": "user", 
@@ -188,24 +223,31 @@ response = agent.query(
 旅行プランを考えてください。
 ---
 旅行エリア
-- 仙台
+- 沖縄
 
 興味・目的
-- グルメ、観光スポットめぐり
+- シュノーケリング系のマリンアクティブティ
+- 美ら海水族館に観光スポットめぐり
+- 国際通りでファッションやお土産をショッピング
+- 植物園に行って沖縄ならではの植物を見る
+
+予算
+- 2人で10万円
 
 日程や滞在時間
-- 1/28-1/31
+- 3/25-3/27
 
 移動手段
-- 新幹線、旅行中は電車・バス・徒歩
-
-他に希望条件や特記事項があれば
-- できるだけ混雑を避けたい
-- 主要な観光スポットは抑えたい
-- すぐ疲れるのであまり多くのスポットは回れない
-- 美味しいものは食べたい
-        """},
+- 飛行機、旅行中は電車やバスで移動
+"""},
 )
+
+# 宿泊施設も検索できるようにしたい
+## 予算オーバーしているか計算し、もしオーバーしていたら再度プランを考え直す
+## 宿泊施設のオプションも考慮して検討する
+## 予約まではしなくて良い
+## 航空券代金も考慮する
+## 現地に何時頃到着するか？
 
 # 長期旅行の場合
 # response = agent.query(
